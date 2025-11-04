@@ -3003,222 +3003,222 @@ class Hermes:
             num_grupos = len(grupos)
 
             # Obtener qué WhatsApp usar
-        wa_mode = self.whatsapp_mode.get()
-        
-        # Determinar cuántas uniones totales habrá
-        if wa_mode == "Todas":
-            total_uniones = num_grupos * num_devices * 3
-        elif wa_mode == "Ambas":
-            total_uniones = num_grupos * num_devices * 2
-        else:
-            total_uniones = num_grupos * num_devices
-        
-        self.log(f"\n=== UNIRSE A GRUPOS (MODO PARALELO) ===", 'info')
-        self.log(f"Grupos: {num_grupos}", 'info')
-        self.log(f"Dispositivos: {num_devices}", 'info')
-        self.log(f"WhatsApp: {wa_mode}", 'info')
-        self.log(f"Total de uniones: {total_uniones}", 'info')
-        
-        total = num_grupos * num_devices * 2
-        
-        # Función auxiliar para unirse a un grupo en un dispositivo
-        def unirse_a_grupo_device(device, grupo_link, whatsapp_package, whatsapp_name):
-            """Ejecuta el proceso completo de unión para un dispositivo."""
-            try:
-                if self.should_stop:
-                    return False
-                
-                # Verificar pausa
-                while self.is_paused and not self.should_stop:
-                    time.sleep(0.1)
-                if self.should_stop:
-                    return False
-                
-                self.log(f"[{device}] Uniéndose por {whatsapp_name}...", 'info')
-                
-                # Abrir grupo
-                open_args = ['-s', device, 'shell', 'am', 'start', '-a', 'android.intent.action.VIEW', 
-                            '-d', grupo_link, '-p', whatsapp_package]
-                
-                if not self._run_adb_command(open_args, timeout=20):
-                    self.log(f"[{device}] Fallo al abrir grupo en {whatsapp_name}", "error")
-                    return False
-                
-                # Esperar 2 segundos
-                time.sleep(2)
-                
-                if self.should_stop:
-                    return False
-                
-                # Presionar DPAD_DOWN 3 veces
-                for i in range(3):
+            wa_mode = self.whatsapp_mode.get()
+
+            # Determinar cuántas uniones totales habrá
+            if wa_mode == "Todas":
+                total_uniones = num_grupos * num_devices * 3
+            elif wa_mode == "Ambas":
+                total_uniones = num_grupos * num_devices * 2
+            else:
+                total_uniones = num_grupos * num_devices
+
+            self.log(f"\n=== UNIRSE A GRUPOS (MODO PARALELO) ===", 'info')
+            self.log(f"Grupos: {num_grupos}", 'info')
+            self.log(f"Dispositivos: {num_devices}", 'info')
+            self.log(f"WhatsApp: {wa_mode}", 'info')
+            self.log(f"Total de uniones: {total_uniones}", 'info')
+
+            total = num_grupos * num_devices * 2
+
+            # Función auxiliar para unirse a un grupo en un dispositivo
+            def unirse_a_grupo_device(device, grupo_link, whatsapp_package, whatsapp_name):
+                """Ejecuta el proceso completo de unión para un dispositivo."""
+                try:
                     if self.should_stop:
                         return False
-                    down_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_DOWN']
-                    self._run_adb_command(down_args, timeout=5)
-                    time.sleep(2)
-                
-                if self.should_stop:
-                    return False
-                
-                # Presionar ENTER (primer Enter)
-                enter_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER']
-                self._run_adb_command(enter_args, timeout=10)
-                
-                # Esperar 1 segundo entre Enters
-                time.sleep(1)
-                
-                # Presionar ENTER (segundo Enter)
-                self._run_adb_command(enter_args, timeout=10)
-                
-                # Esperar 2 segundos
-                time.sleep(2)
-                
-                # Presionar BACK para salir del grupo
-                back_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_BACK']
-                self._run_adb_command(back_args, timeout=10)
-                self.log(f"[{device}] Presionando BACK para salir...", 'info')
-                
-                # Esperar 1 segundo final
-                time.sleep(1)
-                
-                self.log(f"[{device}] Unido a grupo por {whatsapp_name}", 'success')
-                return True
-                
-            except Exception as e:
-                self.log(f"[{device}] Error en unión: {e}", 'error')
-                return False
-        
-        # Por cada grupo
-        for idx_grupo, grupo_link in enumerate(grupos):
-            if self.should_stop:
-                break
-            
-            grupo_display = grupo_link[:50] + "..." if len(grupo_link) > 50 else grupo_link
-            self.log(f"\n--- GRUPO {idx_grupo + 1}/{num_grupos}: {grupo_display} ---", 'info')
-            
-            # ===== FASE 1: WHATSAPP BUSINESS (si corresponde) =====
-            if wa_mode == "Business" or wa_mode == "Ambas" or wa_mode == "Todas":
-                fase_num = 1 if (wa_mode == "Ambas" or wa_mode == "Todas") else 0
-                if fase_num == 1:
-                    self.log(f"\n>>> FASE 1: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Business...", 'info')
-                else:
-                    self.log(f"\n>>> Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Business...", 'info')
-                
-                threads_business = []
-                for device in self.devices:
+
+                    # Verificar pausa
+                    while self.is_paused and not self.should_stop:
+                        time.sleep(0.1)
                     if self.should_stop:
-                        break
-                    thread = threading.Thread(
-                        target=unirse_a_grupo_device,
-                        args=(device, grupo_link, 'com.whatsapp.w4b', 'WhatsApp Business'),
-                        daemon=True
-                    )
-                    threads_business.append(thread)
-                    thread.start()
-                
-                # Esperar a que TODOS los threads de Business terminen
-                for thread in threads_business:
-                    thread.join()
-                
-                if fase_num == 1:
-                    self.log(f"\n>>> FASE 1 completada: Todos unidos por WhatsApp Business", 'success')
-                else:
-                    self.log(f"\n>>> Completado: Todos unidos por WhatsApp Business", 'success')
-                
+                        return False
+
+                    self.log(f"[{device}] Uniéndose por {whatsapp_name}...", 'info')
+
+                    # Abrir grupo
+                    open_args = ['-s', device, 'shell', 'am', 'start', '-a', 'android.intent.action.VIEW',
+                                '-d', grupo_link, '-p', whatsapp_package]
+
+                    if not self._run_adb_command(open_args, timeout=20):
+                        self.log(f"[{device}] Fallo al abrir grupo en {whatsapp_name}", "error")
+                        return False
+
+                    # Esperar 2 segundos
+                    time.sleep(2)
+
+                    if self.should_stop:
+                        return False
+
+                    # Presionar DPAD_DOWN 3 veces
+                    for i in range(3):
+                        if self.should_stop:
+                            return False
+                        down_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_DOWN']
+                        self._run_adb_command(down_args, timeout=5)
+                        time.sleep(2)
+
+                    if self.should_stop:
+                        return False
+
+                    # Presionar ENTER (primer Enter)
+                    enter_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER']
+                    self._run_adb_command(enter_args, timeout=10)
+
+                    # Esperar 1 segundo entre Enters
+                    time.sleep(1)
+
+                    # Presionar ENTER (segundo Enter)
+                    self._run_adb_command(enter_args, timeout=10)
+
+                    # Esperar 2 segundos
+                    time.sleep(2)
+
+                    # Presionar BACK para salir del grupo
+                    back_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_BACK']
+                    self._run_adb_command(back_args, timeout=10)
+                    self.log(f"[{device}] Presionando BACK para salir...", 'info')
+
+                    # Esperar 1 segundo final
+                    time.sleep(1)
+
+                    self.log(f"[{device}] Unido a grupo por {whatsapp_name}", 'success')
+                    return True
+
+                except Exception as e:
+                    self.log(f"[{device}] Error en unión: {e}", 'error')
+                    return False
+            
+            # Por cada grupo
+            for idx_grupo, grupo_link in enumerate(grupos):
                 if self.should_stop:
                     break
-            
-            # ===== FASE 2: WHATSAPP NORMAL (si corresponde) =====
-            if wa_mode == "Normal" or wa_mode == "Ambas" or wa_mode == "Todas":
-                fase_num = 2 if (wa_mode == "Ambas" or wa_mode == "Todas") else 0
-                if fase_num == 2:
-                    self.log(f"\n>>> FASE 2: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal...", 'info')
-                else:
-                    self.log(f"\n>>> Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal...", 'info')
                 
-                threads_normal = []
-                for device in self.devices:
-                    if self.should_stop:
-                        break
-                    thread = threading.Thread(
-                        target=unirse_a_grupo_device,
-                        args=(device, grupo_link, 'com.whatsapp', 'WhatsApp Normal'),
-                        daemon=True
-                    )
-                    threads_normal.append(thread)
-                    thread.start()
+                grupo_display = grupo_link[:50] + "..." if len(grupo_link) > 50 else grupo_link
+                self.log(f"\n--- GRUPO {idx_grupo + 1}/{num_grupos}: {grupo_display} ---", 'info')
                 
-                # Esperar a que TODOS los threads de Normal terminen
-                for thread in threads_normal:
-                    thread.join()
-                
-                if fase_num == 2:
-                    self.log(f"\n>>> FASE 2 completada: Todos unidos por WhatsApp Normal", 'success')
-                else:
-                    self.log(f"\n>>> Completado: Todos unidos por WhatsApp Normal", 'success')
-                
-                # Si el modo es "Todas", cambiar de cuenta DESPUÉS de unirse con Normal
-                if wa_mode == "Todas":
-                    self.log(f"\n>>> Cambiando de cuenta en todos los dispositivos...", 'info')
+                # ===== FASE 1: WHATSAPP BUSINESS (si corresponde) =====
+                if wa_mode == "Business" or wa_mode == "Ambas" or wa_mode == "Todas":
+                    fase_num = 1 if (wa_mode == "Ambas" or wa_mode == "Todas") else 0
+                    if fase_num == 1:
+                        self.log(f"\n>>> FASE 1: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Business...", 'info')
+                    else:
+                        self.log(f"\n>>> Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Business...", 'info')
                     
+                    threads_business = []
                     for device in self.devices:
                         if self.should_stop:
                             break
-                        
-                        self.log(f"[{device}] Cerrando WhatsApp Normal...", 'info')
-                        close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
-                        self._run_adb_command(close_cmd, timeout=5)
-                        time.sleep(1)
-                        
-                        self.log(f"[{device}] Reabriendo WhatsApp Normal...", 'info')
-                        open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
-                        self._run_adb_command(open_cmd, timeout=5)
-                        time.sleep(3)  # Esperar 3 segundos para que WhatsApp se abra completamente
-                        
-                        self.log(f"[{device}] Cambiando de cuenta...", 'info')
-                        self._switch_account_for_device(device)
-                        time.sleep(1)
-                        
-                        self.log(f"[{device}] Cerrando WhatsApp Normal después de cambiar cuenta...", 'info')
-                        close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
-                        self._run_adb_command(close_cmd, timeout=5)
-                        time.sleep(1)
-                        
-                        self.log(f"[{device}] Reabriendo WhatsApp Normal con nueva cuenta...", 'info')
-                        open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
-                        self._run_adb_command(open_cmd, timeout=5)
-                        time.sleep(2)
+                        thread = threading.Thread(
+                            target=unirse_a_grupo_device,
+                            args=(device, grupo_link, 'com.whatsapp.w4b', 'WhatsApp Business'),
+                            daemon=True
+                        )
+                        threads_business.append(thread)
+                        thread.start()
+
+                    # Esperar a que TODOS los threads de Business terminen
+                    for thread in threads_business:
+                        thread.join()
+
+                    if fase_num == 1:
+                        self.log(f"\n>>> FASE 1 completada: Todos unidos por WhatsApp Business", 'success')
+                    else:
+                        self.log(f"\n>>> Completado: Todos unidos por WhatsApp Business", 'success')
                     
                     if self.should_stop:
                         break
+                
+                # ===== FASE 2: WHATSAPP NORMAL (si corresponde) =====
+                if wa_mode == "Normal" or wa_mode == "Ambas" or wa_mode == "Todas":
+                    fase_num = 2 if (wa_mode == "Ambas" or wa_mode == "Todas") else 0
+                    if fase_num == 2:
+                        self.log(f"\n>>> FASE 2: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal...", 'info')
+                    else:
+                        self.log(f"\n>>> Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal...", 'info')
+
+                    threads_normal = []
+                    for device in self.devices:
+                        if self.should_stop:
+                            break
+                        thread = threading.Thread(
+                            target=unirse_a_grupo_device,
+                            args=(device, grupo_link, 'com.whatsapp', 'WhatsApp Normal'),
+                            daemon=True
+                        )
+                        threads_normal.append(thread)
+                        thread.start()
+
+                    # Esperar a que TODOS los threads de Normal terminen
+                    for thread in threads_normal:
+                        thread.join()
+
+                    if fase_num == 2:
+                        self.log(f"\n>>> FASE 2 completada: Todos unidos por WhatsApp Normal", 'success')
+                    else:
+                        self.log(f"\n>>> Completado: Todos unidos por WhatsApp Normal", 'success')
+
+                    # Si el modo es "Todas", cambiar de cuenta DESPUÉS de unirse con Normal
+                    if wa_mode == "Todas":
+                        self.log(f"\n>>> Cambiando de cuenta en todos los dispositivos...", 'info')
+
+                        for device in self.devices:
+                            if self.should_stop:
+                                break
+
+                            self.log(f"[{device}] Cerrando WhatsApp Normal...", 'info')
+                            close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
+                            self._run_adb_command(close_cmd, timeout=5)
+                            time.sleep(1)
+
+                            self.log(f"[{device}] Reabriendo WhatsApp Normal...", 'info')
+                            open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
+                            self._run_adb_command(open_cmd, timeout=5)
+                            time.sleep(3)  # Esperar 3 segundos para que WhatsApp se abra completamente
+
+                            self.log(f"[{device}] Cambiando de cuenta...", 'info')
+                            self._switch_account_for_device(device)
+                            time.sleep(1)
+
+                            self.log(f"[{device}] Cerrando WhatsApp Normal después de cambiar cuenta...", 'info')
+                            close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
+                            self._run_adb_command(close_cmd, timeout=5)
+                            time.sleep(1)
+
+                            self.log(f"[{device}] Reabriendo WhatsApp Normal con nueva cuenta...", 'info')
+                            open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
+                            self._run_adb_command(open_cmd, timeout=5)
+                            time.sleep(2)
+
+                        if self.should_stop:
+                            break
+                
+                # ===== FASE 3: WHATSAPP NORMAL 2 (si corresponde) =====
+                if wa_mode == "Todas":
+                    self.log(f"\n>>> FASE 3: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal (cuenta 2)...", 'info')
+
+                    threads_normal2 = []
+                    for device in self.devices:
+                        if self.should_stop:
+                            break
+                        thread = threading.Thread(
+                            target=unirse_a_grupo_device,
+                            args=(device, grupo_link, 'com.whatsapp', 'WhatsApp Normal (cuenta 2)'),
+                            daemon=True
+                        )
+                        threads_normal2.append(thread)
+                        thread.start()
+
+                    # Esperar a que TODOS los threads de Normal 2 terminen
+                    for thread in threads_normal2:
+                        thread.join()
+
+                    self.log(f"\n>>> FASE 3 completada: Todos unidos por WhatsApp Normal (cuenta 2)", 'success')
+                
+                self.log(f"\n=== GRUPO {idx_grupo + 1} completado ===", 'success')
             
-            # ===== FASE 3: WHATSAPP NORMAL 2 (si corresponde) =====
-            if wa_mode == "Todas":
-                self.log(f"\n>>> FASE 3: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal (cuenta 2)...", 'info')
-                
-                threads_normal2 = []
-                for device in self.devices:
-                    if self.should_stop:
-                        break
-                    thread = threading.Thread(
-                        target=unirse_a_grupo_device,
-                        args=(device, grupo_link, 'com.whatsapp', 'WhatsApp Normal (cuenta 2)'),
-                        daemon=True
-                    )
-                    threads_normal2.append(thread)
-                    thread.start()
-                
-                # Esperar a que TODOS los threads de Normal 2 terminen
-                for thread in threads_normal2:
-                    thread.join()
-                
-                self.log(f"\n>>> FASE 3 completada: Todos unidos por WhatsApp Normal (cuenta 2)", 'success')
-            
-            self.log(f"\n=== GRUPO {idx_grupo + 1} completado ===", 'success')
-        
-        self.log(f"\n=== PROCESO DE UNIÓN A GRUPOS FINALIZADO ===", 'success')
-        messagebox.showinfo("Éxito", f"Proceso completado.\n\nSe unieron a {num_grupos} grupo(s) con {num_devices} dispositivo(s).", parent=self.root)
+            self.log(f"\n=== PROCESO DE UNIÓN A GRUPOS FINALIZADO ===", 'success')
+            messagebox.showinfo("Éxito", f"Proceso completado.\n\nSe unieron a {num_grupos} grupo(s) con {num_devices} dispositivo(s).", parent=self.root)
         finally:
             self._finalize_sending()
     
