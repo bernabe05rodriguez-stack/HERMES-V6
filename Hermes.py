@@ -189,6 +189,7 @@ class Hermes:
     def __init__(self, root):
         self.root = root
         self.root.title("HΞЯMΞS V1")
+        self.root.state('zoomed')
         self.root.resizable(True, True)
         self.root.minsize(1500, 900)
         self.center_window(1500, 900)
@@ -568,6 +569,7 @@ class Hermes:
                                                text_color=self.colors['text_header_buttons'],
                                                width=150, height=35, corner_radius=8)
         self.mode_selector.grid(row=0, column=1, padx=(10, 20), sticky='e')
+        self.traditional_send_mode.trace_add('write', self.update_per_whatsapp_stat)
         
         # Botón 3: Iniciar Envío
         btn_frame_3 = ctk.CTkFrame(acts, fg_color="transparent")
@@ -632,7 +634,11 @@ class Hermes:
         self.time_elapsed = ctk.CTkLabel(sc, text="Transcurrido: --:--:--", font=self.fonts['time_label'], fg_color="transparent", text_color=self.colors['text_light'])
         self.time_elapsed.pack(anchor='w', pady=2, padx=25)
         self.time_remaining = ctk.CTkLabel(sc, text="Restante: --:--:--", font=self.fonts['time_label'], fg_color="transparent", text_color=self.colors['text_light'])
-        self.time_remaining.pack(anchor='w', pady=(2, 25), padx=25)
+        self.time_remaining.pack(anchor='w', pady=2, padx=25)
+
+        # Estadística de mensajes por WhatsApp
+        self.stat_per_whatsapp = ctk.CTkLabel(sc, text="Mensajes por WhatsApp: --", font=self.fonts['time_label'], fg_color="transparent", text_color=self.colors['text_light'])
+        self.stat_per_whatsapp.pack(anchor='w', pady=(2, 25), padx=25)
 
         # Bloque 2: Registro de actividad
         lc = ctk.CTkFrame(parent, fg_color=self.colors['bg_log'], corner_radius=30)
@@ -940,6 +946,44 @@ class Hermes:
             # Ocultar los botones
             self.additional_actions_frame.pack_forget()
             self.toggle_actions_btn.configure(text="▼")
+
+    def update_per_whatsapp_stat(self, *args):
+        """Calcula y actualiza la estadística de mensajes por cuenta de WhatsApp."""
+        num_devices = len(self.devices)
+        if not self.links or self.manual_mode or num_devices == 0:
+            self.stat_per_whatsapp.configure(text="Mensajes por WhatsApp: --")
+            return
+
+        mode = self.traditional_send_mode.get()
+        base_links = len(self.links)
+        stat_text = "--"
+
+        if mode == "Business":
+            per_account = base_links / num_devices
+            stat_text = f"~{round(per_account)} (Business)"
+        elif mode == "Normal":
+            per_account = base_links / num_devices
+            stat_text = f"~{round(per_account)} (Normal)"
+        elif mode == "Business/Normal":
+            # Total messages are split between Business and Normal
+            b_total = (base_links + 1) // 2
+            n_total = base_links // 2
+            # Then distributed among devices
+            b_per_account = b_total / num_devices
+            n_per_account = n_total / num_devices
+            stat_text = f"~{round(b_per_account)} (B) / ~{round(n_per_account)} (N)"
+        elif mode == "B/N.1/N.2":
+            # Total messages are split among B, N1, N2
+            b_total = (base_links + 2) // 3
+            n1_total = (base_links + 1) // 3
+            n2_total = base_links - b_total - n1_total
+            # Then distributed among devices
+            b_per_account = b_total / num_devices
+            n1_per_account = n1_total / num_devices
+            n2_per_account = n2_total / num_devices
+            stat_text = f"~{round(b_per_account)}(B), ~{round(n1_per_account)}(N1), ~{round(n2_per_account)}(N2)"
+
+        self.stat_per_whatsapp.configure(text=f"Mensajes por WhatsApp: {stat_text}")
 
     def auto_detect_adb(self):
         """Busca adb.exe en las carpetas comunes del proyecto."""
