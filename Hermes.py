@@ -189,9 +189,20 @@ class Hermes:
     def __init__(self, root):
         self.root = root
         self.root.title("HΞЯMΞS V1")
+        # --- MODIFICACIÓN: Tamaño de ventana inteligente ---
+        # Calcular el 90% de la resolución de la pantalla para el tamaño inicial
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        init_width = int(screen_width * 0.9)
+        init_height = int(screen_height * 0.9)
+
+        # Permitir que la ventana sea redimensionable por el usuario
         self.root.resizable(True, True)
-        self.root.minsize(1500, 900)
-        self.center_window(1500, 900)
+        self.root.minsize(1024, 768)  # Establecer un tamaño mínimo razonable
+
+        # Establecer el tamaño inicial y centrar la ventana
+        self.center_window(init_width, init_height)
+        # --- FIN MODIFICACIÓN ---
 
         # Variables de estado
         self.adb_path = tk.StringVar(value="")
