@@ -189,10 +189,20 @@ class Hermes:
     def __init__(self, root):
         self.root = root
         self.root.title("HΞЯMΞS V1")
-        self.root.state('zoomed')
+        # --- MODIFICACIÓN: Tamaño de ventana inteligente ---
+        # Calcular el 90% de la resolución de la pantalla para el tamaño inicial
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        init_width = int(screen_width * 0.9)
+        init_height = int(screen_height * 0.9)
+
+        # Permitir que la ventana sea redimensionable por el usuario
         self.root.resizable(True, True)
-        self.root.minsize(1500, 900)
-        self.center_window(1500, 900)
+        self.root.minsize(1024, 768)  # Establecer un tamaño mínimo razonable
+
+        # Establecer el tamaño inicial y centrar la ventana
+        self.center_window(init_width, init_height)
+        # --- FIN MODIFICACIÓN ---
 
         # Variables de estado
         self.adb_path = tk.StringVar(value="")
@@ -243,7 +253,7 @@ class Hermes:
         self.wait_between_messages = tk.IntVar(value=2)  # Tiempo entre Business y Normal
         self.write_speed = tk.StringVar(value="Normal")  # Velocidad de escritura: Lento, Normal, Rápido
         self.whatsapp_mode = tk.StringVar(value="Todas")  # Qué WhatsApp usar: Normal, Business, Ambos
-        self.traditional_send_mode = tk.StringVar(value="Business")  # Modo de envío tradicional: Business, Normal, Ambos, TODOS
+        self.traditional_send_mode = tk.StringVar(value="Simple")  # Modo de envío tradicional: Simple, Doble, Triple
 
         self.raw_data = []
         self.columns = []
@@ -489,7 +499,7 @@ class Hermes:
                                                font=('Inter', 13),
                                                cursor='hand2', width=130, height=38, corner_radius=10, state=tk.NORMAL,
                                                border_width=1, border_color=self.colors["text_light"])
-        # self.switch_account_btn.grid(row=0, column=2, padx=8, pady=4)
+        self.switch_account_btn.grid(row=0, column=2, padx=8, pady=4)
         
         # Segunda fila de botones
         # Botón Cambiador
@@ -499,7 +509,7 @@ class Hermes:
                                           font=('Inter', 13),
                                           cursor='hand2', width=130, height=38, corner_radius=10, state=tk.NORMAL,
                                           border_width=1, border_color=self.colors["text_light"])
-        # self.cambiador_btn.grid(row=1, column=0, padx=(12, 8), pady=4)
+        self.cambiador_btn.grid(row=1, column=0, padx=(12, 8), pady=4)
         
         # Botón Modo Oscuro
         self.dark_mode_btn = ctk.CTkButton(self.additional_actions_frame, text="Modo Oscuro", command=self.toggle_dark_mode,
@@ -508,7 +518,7 @@ class Hermes:
                                           font=('Inter', 13),
                                           cursor='hand2', width=130, height=38, corner_radius=10, state=tk.NORMAL,
                                           border_width=1, border_color=self.colors["text_light"])
-        self.dark_mode_btn.grid(row=0, column=2, padx=8, pady=4)
+        self.dark_mode_btn.grid(row=1, column=1, padx=8, pady=4)
 
         ctk.CTkFrame(ac, fg_color=self.colors['text_light'], height=1).pack(fill=tk.X, pady=(0, 25), padx=25)
 
@@ -546,7 +556,7 @@ class Hermes:
         mode_frame.grid_columnconfigure(0, weight=0)
         mode_frame.grid_columnconfigure(1, weight=1)
         
-        num_lbl_mode = ctk.CTkLabel(mode_frame, text="3", font=self.fonts['progress_value'], fg_color="transparent", text_color=self.colors['text'], width=40)
+        num_lbl_mode = ctk.CTkLabel(mode_frame, text="2.5", font=self.fonts['progress_value'], fg_color="transparent", text_color=self.colors['text'], width=40)
         num_lbl_mode.grid(row=0, column=0, padx=(0, 15))
         
         mode_selector_frame = ctk.CTkFrame(mode_frame, fg_color=self.colors['bg_card'], corner_radius=10, height=50)
@@ -557,20 +567,18 @@ class Hermes:
         mode_label = ctk.CTkLabel(mode_selector_frame, text="Modo de Envío:", font=self.fonts['button'], text_color=self.colors['text'])
         mode_label.grid(row=0, column=0, padx=(20, 10), sticky='w')
 
-        self.mode_selector = ctk.CTkSegmentedButton(mode_selector_frame, variable=self.traditional_send_mode,
-                                                     values=["Business", "Normal", "Business/Normal", "B/N.1/N.2"],
-                                                     font=('Inter', 10, 'bold'),
-                                                     height=35,
-                                                     corner_radius=8,
-                                                     fg_color=self.colors['bg'],
-                                                     selected_color=self.colors['action_excel'],
-                                                     selected_hover_color=self.hover_colors['action_excel'],
-                                                     unselected_color=self.colors['bg_card'],
-                                                     unselected_hover_color=self.colors['bg'],
-                                                     text_color=self.colors['text'])
-        self.mode_selector.grid(row=0, column=1, padx=(10, 20))
-        mode_selector_frame.grid_columnconfigure(1, weight=1)
-        self.traditional_send_mode.trace_add('write', self.update_per_whatsapp_stat)
+        self.mode_selector = ctk.CTkOptionMenu(mode_selector_frame, variable=self.traditional_send_mode,
+                                               values=["Simple", "Doble", "Triple"],
+                                               font=self.fonts['button'],
+                                               fg_color=self.colors['action_excel'],
+                                               button_color=self.colors['action_excel'],
+                                               button_hover_color=self.hover_colors['action_excel'],
+                                               dropdown_fg_color=self.colors['bg_card'],
+                                               dropdown_hover_color=self.hover_colors['action_excel'],
+                                               dropdown_text_color=self.colors['text'],
+                                               text_color=self.colors['text_header_buttons'],
+                                               width=150, height=35, corner_radius=8)
+        self.mode_selector.grid(row=0, column=1, padx=(10, 20), sticky='e')
         
         # Botón 3: Iniciar Envío
         btn_frame_3 = ctk.CTkFrame(acts, fg_color="transparent")
@@ -578,7 +586,7 @@ class Hermes:
         btn_frame_3.grid_columnconfigure(0, weight=0)
         btn_frame_3.grid_columnconfigure(1, weight=1)
         
-        num_lbl_3 = ctk.CTkLabel(btn_frame_3, text="4", font=self.fonts['progress_value'], fg_color="transparent", text_color=self.colors['text'], width=40)
+        num_lbl_3 = ctk.CTkLabel(btn_frame_3, text="3", font=self.fonts['progress_value'], fg_color="transparent", text_color=self.colors['text'], width=40)
         num_lbl_3.grid(row=0, column=0, padx=(0, 15))
         
         self.btn_start = ctk.CTkButton(btn_frame_3, text="▶  INICIAR ENVÍO", command=self.start_sending,
@@ -635,11 +643,7 @@ class Hermes:
         self.time_elapsed = ctk.CTkLabel(sc, text="Transcurrido: --:--:--", font=self.fonts['time_label'], fg_color="transparent", text_color=self.colors['text_light'])
         self.time_elapsed.pack(anchor='w', pady=2, padx=25)
         self.time_remaining = ctk.CTkLabel(sc, text="Restante: --:--:--", font=self.fonts['time_label'], fg_color="transparent", text_color=self.colors['text_light'])
-        self.time_remaining.pack(anchor='w', pady=2, padx=25)
-
-        # Estadística de mensajes por WhatsApp
-        self.stat_per_whatsapp = ctk.CTkLabel(sc, text="Mensajes por WhatsApp: --", font=self.fonts['time_label'], fg_color="transparent", text_color=self.colors['text_light'])
-        self.stat_per_whatsapp.pack(anchor='w', pady=(2, 25), padx=25)
+        self.time_remaining.pack(anchor='w', pady=(2, 25), padx=25)
 
         # Bloque 2: Registro de actividad
         lc = ctk.CTkFrame(parent, fg_color=self.colors['bg_log'], corner_radius=30)
@@ -947,44 +951,6 @@ class Hermes:
             # Ocultar los botones
             self.additional_actions_frame.pack_forget()
             self.toggle_actions_btn.configure(text="▼")
-
-    def update_per_whatsapp_stat(self, *args):
-        """Calcula y actualiza la estadística de mensajes por cuenta de WhatsApp."""
-        num_devices = len(self.devices)
-        if not self.links or self.manual_mode or num_devices == 0:
-            self.stat_per_whatsapp.configure(text="Mensajes por WhatsApp: --")
-            return
-
-        mode = self.traditional_send_mode.get()
-        base_links = len(self.links)
-        stat_text = "--"
-
-        if mode == "Business":
-            per_account = base_links / num_devices
-            stat_text = f"~{round(per_account)} (Business)"
-        elif mode == "Normal":
-            per_account = base_links / num_devices
-            stat_text = f"~{round(per_account)} (Normal)"
-        elif mode == "Business/Normal":
-            # Total messages are split between Business and Normal
-            b_total = (base_links + 1) // 2
-            n_total = base_links // 2
-            # Then distributed among devices
-            b_per_account = b_total / num_devices
-            n_per_account = n_total / num_devices
-            stat_text = f"~{round(b_per_account)} (B) / ~{round(n_per_account)} (N)"
-        elif mode == "B/N.1/N.2":
-            # Total messages are split among B, N1, N2
-            b_total = (base_links + 2) // 3
-            n1_total = (base_links + 1) // 3
-            n2_total = base_links - b_total - n1_total
-            # Then distributed among devices
-            b_per_account = b_total / num_devices
-            n1_per_account = n1_total / num_devices
-            n2_per_account = n2_total / num_devices
-            stat_text = f"~{round(b_per_account)}(B), ~{round(n1_per_account)}(N1), ~{round(n2_per_account)}(N2)"
-
-        self.stat_per_whatsapp.configure(text=f"Mensajes por WhatsApp: {stat_text}")
 
     def auto_detect_adb(self):
         """Busca adb.exe en las carpetas comunes del proyecto."""
@@ -2186,8 +2152,22 @@ class Hermes:
             self.fidelizado_mode = None  # No usar modo fidelizado
             self.manual_paired_messages = []
 
-        self._enter_task_mode()
+        self.is_running = True
+        self.is_paused = False
+        self.should_stop = False
+        self.sent_count = 0
+        self.failed_count = 0
+        self.current_index = 0
+        self.start_time = datetime.now()
         self.update_stats() # Actualizar UI con el total
+
+        # Actualizar UI
+        self.btn_start.configure(state=tk.DISABLED)
+        self.btn_load.configure(state=tk.DISABLED)
+        if self.fidelizado_unlock_btn:
+            self.fidelizado_unlock_btn.configure(state=tk.DISABLED)
+        self.btn_pause.configure(state=tk.NORMAL)
+        self.btn_stop.configure(state=tk.NORMAL)
 
         # Iniciar hilo
         threading.Thread(target=self.send_thread, daemon=True).start()
@@ -2276,8 +2256,10 @@ class Hermes:
                 self.close_all_apps(dev)
 
             if self.should_stop: self.log("Cancelado", 'warning'); return
-            self.log("Pausa inicial de 3s...", 'info'); time.sleep(3)
-            if self.should_stop: self.log("Cancelado", 'warning'); return
+            self.log("Pausa inicial de 3s...", 'info')
+            if not self._pausable_sleep(3):
+                self.log("Cancelado", 'warning')
+                return
 
             # --- Lógica de envío (depende del modo) ---
             if self.fidelizado_mode == "GRUPOS":
@@ -2311,10 +2293,8 @@ class Hermes:
         Ejecuta una única tarea de envío (abrir link, enviar, esperar).
         Esta función es el cuerpo del bucle de los hilos de envío.
         """
-        # Bucle de pausa
-        while self.is_paused and not self.should_stop:
-            time.sleep(0.1)
-        if self.should_stop: return False # Indicar que la tarea no se completó
+        # Pausa y chequeo de cancelación
+        if not self._pausable_sleep(0.1): return False
 
         # Actualizar UI (índice actual)
         # Solo actualizamos el índice que se está procesando
@@ -2343,11 +2323,7 @@ class Hermes:
         if task_index < self.total_messages and not self.should_stop:
             delay = random.uniform(self.delay_min.get(), self.delay_max.get())
             self.log(f"Esperando {delay:.1f}s... (Post-tarea {task_index})", 'info')
-            elapsed = 0
-            while elapsed < delay and not self.should_stop:
-                while self.is_paused and not self.should_stop: time.sleep(0.1)
-                if self.should_stop: break
-                time.sleep(0.1); elapsed += 0.1
+            if not self._pausable_sleep(delay): return False
         
         return success
 
@@ -2362,20 +2338,16 @@ class Hermes:
         mode = self.traditional_send_mode.get()
         self.log(f"Modo de envío: {mode}", 'info')
         
-        if mode == "Business":
+        if mode == "Simple":
             self._run_simple_mode()
-        elif mode == "Normal":
-            # Reutiliza _run_simple_mode pero cambiando el paquete de WA
-            self._run_simple_mode(whatsapp_package="com.whatsapp")
-        elif mode == "Business/Normal":
+        elif mode == "Doble":
             self._run_doble_mode()
-        elif mode == "B/N.1/N.2":
+        elif mode == "Triple":
             self._run_triple_mode()
     
-    def _run_simple_mode(self, whatsapp_package="com.whatsapp.w4b"):
-        """Modo Simple: 1 URL por teléfono, usando el paquete de WhatsApp especificado."""
-        log_msg = "Ejecutando Modo Business..." if whatsapp_package == "com.whatsapp.w4b" else "Ejecutando Modo Normal..."
-        self.log(log_msg, 'info')
+    def _run_simple_mode(self):
+        """Modo Simple: 1 URL por teléfono (comportamiento original)."""
+        self.log("Ejecutando Modo Simple...", 'info')
         idx = 0  # Índice del dispositivo a usar
         
         for i, link in enumerate(self.links):
@@ -2386,99 +2358,81 @@ class Hermes:
             device = self.devices[idx]
             idx = (idx + 1) % len(self.devices)
             
-            # Ejecutar tarea con el paquete de WA especificado
-            self.run_single_task(device, link, None, i + 1, whatsapp_package=whatsapp_package)
+            # Ejecutar tarea con Business
+            self.run_single_task(device, link, None, i + 1, whatsapp_package="com.whatsapp.w4b")
 
     def _run_doble_mode(self):
-        """Modo Doble: Rota secuencialmente entre dispositivos y cuentas Business/Normal."""
-        self.log("Ejecutando Modo Doble (Rotación Correcta)...", 'info')
+        """Modo Doble: 2 URLs por teléfono (Business + Normal)."""
+        self.log("Ejecutando Modo Doble...", 'info')
+        idx = 0
+        task_counter = 0
 
-        # 1. Crear la lista de todas las combinaciones de envío
-        envio_combinations = []
-        for device in self.devices:
-            envio_combinations.append({"device": device, "wa_name": "Business", "wa_package": "com.whatsapp.w4b"})
-            envio_combinations.append({"device": device, "wa_name": "Normal", "wa_package": "com.whatsapp"})
-
-        num_combinations = len(envio_combinations)
-        if num_combinations == 0:
-            self.log("Error: No hay dispositivos para el modo Doble.", "error")
-            return
-
-        # 2. Iterar una vez sobre los links, rotando las combinaciones
         for i, link in enumerate(self.links):
             if self.should_stop:
                 self.log("Cancelado en bucle", 'warning')
                 break
             
-            self.last_task_time = time.time()
+            device = self.devices[idx]
+            idx = (idx + 1) % len(self.devices)
 
-            # Seleccionar la combinación de envío (dispositivo + cuenta)
-            combination = envio_combinations[i % num_combinations]
-            device = combination["device"]
-            wa_name = combination["wa_name"]
-            wa_package = combination["wa_package"]
-
-            self.log(f"[{device}] Enviando con {wa_name}", 'info')
-            self.run_single_task(device, link, None, i + 1, whatsapp_package=wa_package)
-
-    def _run_triple_mode(self):
-        """Modo Triple: Rota secuencialmente entre dispositivos y las 3 cuentas."""
-        self.log("Ejecutando Modo Triple (Rotación Correcta)...", 'info')
-        is_normal_account_2 = {dev_id: False for dev_id in self.devices}
-
-        # 1. Crear la lista de todas las combinaciones de envío
-        envio_combinations = []
-        for device in self.devices:
-            envio_combinations.append({"device": device, "wa_name": "Business", "wa_package": "com.whatsapp.w4b", "needs_switch": False})
-            envio_combinations.append({"device": device, "wa_name": "Normal (Cuenta 1)", "wa_package": "com.whatsapp", "needs_switch": False})
-            envio_combinations.append({"device": device, "wa_name": "Normal (Cuenta 2)", "wa_package": "com.whatsapp", "needs_switch": True})
-
-        num_combinations = len(envio_combinations)
-        if num_combinations == 0:
-            self.log("Error: No hay dispositivos para el modo Triple.", "error")
-            return
-
-        # 2. Iterar una vez sobre los links, rotando las combinaciones
-        for i, link in enumerate(self.links):
-            if self.should_stop:
-                self.log("Cancelado en bucle", 'warning')
-                break
-
-            self.last_task_time = time.time()
-
-            # Seleccionar la combinación de envío (dispositivo + cuenta)
-            combination = envio_combinations[i % num_combinations]
-            device = combination["device"]
-            wa_name = combination["wa_name"]
-            wa_package = combination["wa_package"]
-            needs_switch_to_acc2 = combination["needs_switch"]
-            
-            # Gestionar cambio de cuenta si es necesario
-            if "Normal" in wa_name:
-                currently_is_acc2 = is_normal_account_2.get(device, False)
-                if needs_switch_to_acc2 and not currently_is_acc2:
-                    self.log(f"Cambiando a Cuenta 2 en {device}...", 'info')
-                    self._switch_whatsapp_account(device)
-                    time.sleep(1)
-                    is_normal_account_2[device] = True
-                elif not needs_switch_to_acc2 and currently_is_acc2:
-                    self.log(f"Restaurando a Cuenta 1 en {device}...", 'info')
-                    self._switch_whatsapp_account(device)
-                    time.sleep(1)
-                    is_normal_account_2[device] = False
+            # Envío 1: Business (predeterminado)
+            task_counter += 1
+            self.log(f"[{device}] Envío 1/2 con Business", 'info')
+            self.run_single_task(device, link, None, task_counter, whatsapp_package="com.whatsapp.w4b")
 
             if self.should_stop: break
 
-            self.log(f"[{device}] Enviando con {wa_name}", 'info')
-            self.run_single_task(device, link, None, i + 1, whatsapp_package=wa_package)
+            # Envío 2: Normal
+            task_counter += 1
+            self.log(f"[{device}] Envío 2/2 con Normal", 'info')
+            self.run_single_task(device, link, None, task_counter, whatsapp_package="com.whatsapp")
 
-        # Dejar todas las cuentas Normal en el estado inicial (Cuenta 1)
-        self.log("Finalizando y restaurando cuentas a estado inicial...", 'info')
-        for dev, is_acc2 in is_normal_account_2.items():
-            if is_acc2:
-                self.log(f"Restaurando a Cuenta 1 en {dev}...", 'info')
-                self._switch_whatsapp_account(dev)
-                time.sleep(1)
+            if self.should_stop: break
+
+    def _run_triple_mode(self):
+        """Modo Triple: 3 URLs por teléfono (Business + Normal Cuenta1 + Normal Cuenta2)."""
+        self.log("Ejecutando Modo Triple...", 'info')
+        idx = 0
+        task_counter = 0
+
+        for i, link in enumerate(self.links):
+            if self.should_stop:
+                self.log("Cancelado en bucle", 'warning')
+                break
+
+            device = self.devices[idx]
+            idx = (idx + 1) % len(self.devices)
+
+            # Envío 1: Business
+            task_counter += 1
+            self.log(f"[{device}] Envío 1/3 con Business", 'info')
+            self.run_single_task(device, link, None, task_counter, whatsapp_package="com.whatsapp.w4b")
+
+            if self.should_stop: break
+
+            # Envío 2: Normal Cuenta 1
+            task_counter += 1
+            self.log(f"[{device}] Envío 2/3 con Normal (Cuenta 1)", 'info')
+            self.run_single_task(device, link, None, task_counter, whatsapp_package="com.whatsapp")
+
+            if self.should_stop: break
+
+            # Cambiar de cuenta en Normal
+            self._switch_whatsapp_account(device)
+            if not self._pausable_sleep(1): break
+
+            if self.should_stop: break
+
+            # Envío 3: Normal Cuenta 2
+            task_counter += 1
+            self.log(f"[{device}] Envío 3/3 con Normal (Cuenta 2)", 'info')
+            self.run_single_task(device, link, None, task_counter, whatsapp_package="com.whatsapp")
+
+            if self.should_stop: break
+
+            # Volver a cuenta 1
+            self._switch_whatsapp_account(device)
+            if not self._pausable_sleep(1): break
     
     
     def _get_whatsapp_apps_to_use(self):
@@ -2506,10 +2460,8 @@ class Hermes:
         """
         self.log(f"\n[{device}] Envío {task_counter}/{self.total_messages}: {wa_name}", 'info')
         
-        # Verificar pausa
-        while self.is_paused and not self.should_stop:
-            time.sleep(0.1)
-        if self.should_stop: return False
+        # Verificar pausa y cancelación
+        if not self._pausable_sleep(0.1): return False
         
         # Abrir WhatsApp
         self.log(f"Abriendo WhatsApp {wa_name} en {device}", 'info')
@@ -2524,7 +2476,7 @@ class Hermes:
         
         # Esperar 3 segundos después de abrir
         self.log("Esperando 3s después de abrir...", 'info')
-        time.sleep(3)
+        if not self._pausable_sleep(3): return False
         
         # Escribir mensaje
         self.log(f"Escribiendo mensaje ({wa_name})...", 'info')
@@ -2538,12 +2490,7 @@ class Hermes:
         wait_write = self.wait_after_write.get()
         if wait_write > 0:
             self.log(f"Esperando {wait_write}s después de escribir...", 'info')
-            elapsed = 0
-            while elapsed < wait_write and not self.should_stop:
-                while self.is_paused and not self.should_stop: time.sleep(0.1)
-                if self.should_stop: return False
-                time.sleep(0.1)
-                elapsed += 0.1
+            if not self._pausable_sleep(wait_write): return False
         
         # Presionar Enter
         enter_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER']
@@ -2556,12 +2503,7 @@ class Hermes:
         # Esperar entre Enters
         wait_enters = self.wait_between_enters.get()
         self.log(f"Esperando {wait_enters}s entre Enters...", 'info')
-        elapsed = 0
-        while elapsed < wait_enters and not self.should_stop:
-            while self.is_paused and not self.should_stop: time.sleep(0.1)
-            if self.should_stop: return False
-            time.sleep(0.1)
-            elapsed += 0.1
+        if not self._pausable_sleep(wait_enters): return False
         
         # Presionar Enter otra vez
         if not self._run_adb_command(enter_args, timeout=10):
@@ -2579,26 +2521,26 @@ class Hermes:
             self.log(f"[{device}] Cerrando WhatsApp Normal después de enviar...", 'info')
             close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
             self._run_adb_command(close_cmd, timeout=5)
-            time.sleep(1)
+            if not self._pausable_sleep(1): return False
             
             self.log(f"[{device}] Reabriendo WhatsApp Normal...", 'info')
             open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
             self._run_adb_command(open_cmd, timeout=5)
-            time.sleep(3)  # Esperar 3 segundos para que WhatsApp se abra completamente
+            if not self._pausable_sleep(3): return False # Esperar 3 segundos para que WhatsApp se abra completamente
             
             self.log(f"[{device}] Cambiando de cuenta...", 'info')
             self._switch_account_for_device(device)
-            time.sleep(1)
+            if not self._pausable_sleep(1): return False
             
             self.log(f"[{device}] Cerrando WhatsApp Normal después de cambiar cuenta...", 'info')
             close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
             self._run_adb_command(close_cmd, timeout=5)
-            time.sleep(1)
+            if not self._pausable_sleep(1): return False
             
             self.log(f"[{device}] Reabriendo WhatsApp Normal con nueva cuenta...", 'info')
             open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
             self._run_adb_command(open_cmd, timeout=5)
-            time.sleep(2)
+            if not self._pausable_sleep(2): return False
         
         return True
     
@@ -2726,14 +2668,9 @@ class Hermes:
                             wait_between = self.wait_between_messages.get()
                             if wait_between > 0:
                                 self.log(f"Esperando {wait_between}s antes del siguiente WhatsApp...", 'info')
-                                elapsed = 0
-                                while elapsed < wait_between and not self.should_stop:
-                                    while self.is_paused and not self.should_stop: time.sleep(0.1)
-                                    if self.should_stop: break
-                                    time.sleep(0.1)
-                                    elapsed += 0.1
+                                if not self._pausable_sleep(wait_between): break
                         
-                        time.sleep(0.5)  # Pequeña pausa entre envíos
+                        if not self._pausable_sleep(0.5): break
                 
                 if self.should_stop: break
                 self.log(f"\n=== {tipo_str} {target_idx + 1} completado ===", 'success')
@@ -2805,14 +2742,9 @@ class Hermes:
                             wait_between = self.wait_between_messages.get()
                             if wait_between > 0:
                                 self.log(f"Esperando {wait_between}s antes del siguiente WhatsApp...", 'info')
-                                elapsed = 0
-                                while elapsed < wait_between and not self.should_stop:
-                                    while self.is_paused and not self.should_stop: time.sleep(0.1)
-                                    if self.should_stop: break
-                                    time.sleep(0.1)
-                                    elapsed += 0.1
+                                if not self._pausable_sleep(wait_between): break
                         
-                        time.sleep(0.5)  # Pequeña pausa entre envíos
+                        if not self._pausable_sleep(0.5): break
                 
                 if self.should_stop: break
                 self.log(f"\n=== NÚMERO {num_idx + 1} completado ===", 'success')
@@ -2827,95 +2759,8 @@ class Hermes:
         Por cada grupo, envía con los WhatsApps seleccionados (Normal, Business o Ambos).
         Los mensajes rotan: 1,2,3,4... y cuando se acaban vuelven al 1.
         """
-        try:
-            self._enter_task_mode()
-            num_devices = len(self.devices)
-            num_grupos = len(self.manual_inputs_groups)
-            num_bucles = self.manual_loops
-
-            if len(self.manual_messages_groups) < 1:
-                self.log("Error: Modo Grupos requiere al menos 1 mensaje cargado.", "error")
-                messagebox.showerror("Error", "Debes cargar al menos 1 archivo de mensajes.", parent=self.root)
-                return
-
-            # Usar índice de inicio aleatorio
-            mensaje_index = self.mensaje_start_index
-            total_mensajes = len(self.manual_messages_groups)
-            task_counter = 0
-            whatsapp_apps = self._get_whatsapp_apps_to_use()
-
-            self.log(f"Modo Grupos: {num_bucles} ciclo(s), {num_grupos} grupo(s), {num_devices} dispositivo(s)", 'info')
-            self.log(f"WhatsApp: {self.whatsapp_mode.get()}", 'info')
-            self.log(f"Total de envíos: {self.total_messages}", 'info')
-
-            for ciclo in range(num_bucles):
-                if self.should_stop: break
-                self.log(f"\n--- CICLO {ciclo + 1}/{num_bucles} ---", 'info')
-
-                # Por cada grupo
-                for idx_grupo, grupo_link in enumerate(self.manual_inputs_groups):
-                    if self.should_stop: break
-                    grupo_display = grupo_link[:50] + "..." if len(grupo_link) > 50 else grupo_link
-                    self.log(f"\n=== GRUPO {idx_grupo + 1}/{num_grupos}: {grupo_display} ===", 'info')
-
-                    # Por cada dispositivo
-                    for device in self.devices:
-                        if self.should_stop: break
-
-                        # Por cada WhatsApp (Normal, Business, o Ambos)
-                        for wa_name, wa_package in whatsapp_apps:
-                            if self.should_stop: break
-
-                            task_counter += 1
-                            self.current_index = task_counter
-                            self.root.after(0, self.update_stats)
-
-                            # Obtener mensaje rotativo
-                            mensaje = self.manual_messages_groups[mensaje_index % total_mensajes]
-                            mensaje_index += 1
-
-                            # Enviar usando la función auxiliar
-                            success = self._send_to_target_with_whatsapp(
-                                device, grupo_link, wa_name, wa_package, mensaje, task_counter
-                            )
-
-                            # Pausa entre WhatsApps si hay más de uno
-                            if success and len(whatsapp_apps) > 1 and wa_name == whatsapp_apps[0][0]:
-                                wait_between = self.wait_between_messages.get()
-                                if wait_between > 0:
-                                    self.log(f"Esperando {wait_between}s antes del siguiente WhatsApp...", 'info')
-                                    elapsed = 0
-                                    while elapsed < wait_between and not self.should_stop:
-                                        while self.is_paused and not self.should_stop: time.sleep(0.1)
-                                        if self.should_stop: break
-                                        time.sleep(0.1)
-                                        elapsed += 0.1
-
-                            time.sleep(0.5)  # Pequeña pausa entre envíos
-
-                    if self.should_stop: break
-                    self.log(f"\n=== GRUPO {idx_grupo + 1} completado ===", 'success')
-
-                if self.should_stop: break
-                self.log(f"\n--- CICLO {ciclo + 1} completado ---", 'success')
-
-            self.log(f"\nModo Grupos Dual finalizado", 'success')
-        finally:
-            self._finalize_sending()
-
-    def run_unirse_grupos(self, grupos):
-        """
-        Función para unirse automáticamente a grupos.
-        NUEVA LÓGICA CON THREADING (EJECUCIÓN PARALELA):
-        Por cada grupo:
-          - TODOS los dispositivos se unen SIMULTÁNEAMENTE según la selección de WhatsApp
-        Proceso:
-          - Presiona DPAD_DOWN 3 veces (con pausas de 2s)
-          - Presiona ENTER dos veces (doble Enter)
-          - Presiona BACK para salir
-        """
         num_devices = len(self.devices)
-        num_grupos = len(grupos)
+        num_grupos = len(self.manual_inputs_groups)
         num_bucles = self.manual_loops
         
         if len(self.manual_messages_groups) < 1:
@@ -2997,230 +2842,224 @@ class Hermes:
           - Presiona ENTER dos veces (doble Enter)
           - Presiona BACK para salir
         """
-        try:
-            self._enter_task_mode()
-            num_devices = len(self.devices)
-            num_grupos = len(grupos)
+        num_devices = len(self.devices)
+        num_grupos = len(grupos)
 
-            # Obtener qué WhatsApp usar
-            wa_mode = self.whatsapp_mode.get()
+        # Obtener qué WhatsApp usar
+        wa_mode = self.whatsapp_mode.get()
 
-            # Determinar cuántas uniones totales habrá
-            if wa_mode == "Todas":
-                total_uniones = num_grupos * num_devices * 3
-            elif wa_mode == "Ambas":
-                total_uniones = num_grupos * num_devices * 2
-            else:
-                total_uniones = num_grupos * num_devices
+        # Determinar cuántas uniones totales habrá
+        if wa_mode == "Todas":
+            total_uniones = num_grupos * num_devices * 3
+        elif wa_mode == "Ambas":
+            total_uniones = num_grupos * num_devices * 2
+        else:
+            total_uniones = num_grupos * num_devices
 
-            self.log(f"\n=== UNIRSE A GRUPOS (MODO PARALELO) ===", 'info')
-            self.log(f"Grupos: {num_grupos}", 'info')
-            self.log(f"Dispositivos: {num_devices}", 'info')
-            self.log(f"WhatsApp: {wa_mode}", 'info')
-            self.log(f"Total de uniones: {total_uniones}", 'info')
+        self.log(f"\n=== UNIRSE A GRUPOS (MODO PARALELO) ===", 'info')
+        self.log(f"Grupos: {num_grupos}", 'info')
+        self.log(f"Dispositivos: {num_devices}", 'info')
+        self.log(f"WhatsApp: {wa_mode}", 'info')
+        self.log(f"Total de uniones: {total_uniones}", 'info')
 
-            total = num_grupos * num_devices * 2
+        total = num_grupos * num_devices * 2
 
-            # Función auxiliar para unirse a un grupo en un dispositivo
-            def unirse_a_grupo_device(device, grupo_link, whatsapp_package, whatsapp_name):
-                """Ejecuta el proceso completo de unión para un dispositivo."""
-                try:
-                    if self.should_stop:
-                        return False
-
-                    # Verificar pausa
-                    while self.is_paused and not self.should_stop:
-                        time.sleep(0.1)
-                    if self.should_stop:
-                        return False
-
-                    self.log(f"[{device}] Uniéndose por {whatsapp_name}...", 'info')
-
-                    # Abrir grupo
-                    open_args = ['-s', device, 'shell', 'am', 'start', '-a', 'android.intent.action.VIEW',
-                                '-d', grupo_link, '-p', whatsapp_package]
-
-                    if not self._run_adb_command(open_args, timeout=20):
-                        self.log(f"[{device}] Fallo al abrir grupo en {whatsapp_name}", "error")
-                        return False
-
-                    # Esperar 2 segundos
-                    time.sleep(2)
-
-                    if self.should_stop:
-                        return False
-
-                    # Presionar DPAD_DOWN 3 veces
-                    for i in range(3):
-                        if self.should_stop:
-                            return False
-                        down_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_DOWN']
-                        self._run_adb_command(down_args, timeout=5)
-                        time.sleep(2)
-
-                    if self.should_stop:
-                        return False
-
-                    # Presionar ENTER (primer Enter)
-                    enter_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER']
-                    self._run_adb_command(enter_args, timeout=10)
-
-                    # Esperar 1 segundo entre Enters
-                    time.sleep(1)
-
-                    # Presionar ENTER (segundo Enter)
-                    self._run_adb_command(enter_args, timeout=10)
-
-                    # Esperar 2 segundos
-                    time.sleep(2)
-
-                    # Presionar BACK para salir del grupo
-                    back_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_BACK']
-                    self._run_adb_command(back_args, timeout=10)
-                    self.log(f"[{device}] Presionando BACK para salir...", 'info')
-
-                    # Esperar 1 segundo final
-                    time.sleep(1)
-
-                    self.log(f"[{device}] Unido a grupo por {whatsapp_name}", 'success')
-                    return True
-
-                except Exception as e:
-                    self.log(f"[{device}] Error en unión: {e}", 'error')
+        # Función auxiliar para unirse a un grupo en un dispositivo
+        def unirse_a_grupo_device(device, grupo_link, whatsapp_package, whatsapp_name):
+            """Ejecuta el proceso completo de unión para un dispositivo."""
+            try:
+                if self.should_stop:
                     return False
+
+        # Verificar pausa y cancelación
+        if not self._pausable_sleep(0.1): return False
+                    return False
+
+                self.log(f"[{device}] Uniéndose por {whatsapp_name}...", 'info')
+
+                # Abrir grupo
+                open_args = ['-s', device, 'shell', 'am', 'start', '-a', 'android.intent.action.VIEW',
+                            '-d', grupo_link, '-p', whatsapp_package]
+
+                if not self._run_adb_command(open_args, timeout=20):
+                    self.log(f"[{device}] Fallo al abrir grupo en {whatsapp_name}", "error")
+                    return False
+
+                # Esperar 2 segundos
+                if not self._pausable_sleep(2): return False
+
+                if self.should_stop:
+                    return False
+
+                # Presionar DPAD_DOWN 3 veces
+                for i in range(3):
+                    if self.should_stop:
+                        return False
+                    down_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_DOWN']
+                    self._run_adb_command(down_args, timeout=5)
+                    if not self._pausable_sleep(2): return False
+
+                if self.should_stop:
+                    return False
+
+                # Presionar ENTER (primer Enter)
+                enter_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER']
+                self._run_adb_command(enter_args, timeout=10)
+
+                # Esperar 1 segundo entre Enters
+                if not self._pausable_sleep(1): return False
+
+                # Presionar ENTER (segundo Enter)
+                self._run_adb_command(enter_args, timeout=10)
+
+                # Esperar 2 segundos
+                if not self._pausable_sleep(2): return False
+
+                # Presionar BACK para salir del grupo
+                back_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_BACK']
+                self._run_adb_command(back_args, timeout=10)
+                self.log(f"[{device}] Presionando BACK para salir...", 'info')
+
+                # Esperar 1 segundo final
+                if not self._pausable_sleep(1): return False
+
+                self.log(f"[{device}] Unido a grupo por {whatsapp_name}", 'success')
+                return True
+
+            except Exception as e:
+                self.log(f"[{device}] Error en unión: {e}", 'error')
+                return False
+
+        # Por cada grupo
+        for idx_grupo, grupo_link in enumerate(grupos):
+            if self.should_stop:
+                break
             
-            # Por cada grupo
-            for idx_grupo, grupo_link in enumerate(grupos):
+            grupo_display = grupo_link[:50] + "..." if len(grupo_link) > 50 else grupo_link
+            self.log(f"\n--- GRUPO {idx_grupo + 1}/{num_grupos}: {grupo_display} ---", 'info')
+
+            # ===== FASE 1: WHATSAPP BUSINESS (si corresponde) =====
+            if wa_mode == "Business" or wa_mode == "Ambas" or wa_mode == "Todas":
+                fase_num = 1 if (wa_mode == "Ambas" or wa_mode == "Todas") else 0
+                if fase_num == 1:
+                    self.log(f"\n>>> FASE 1: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Business...", 'info')
+                else:
+                    self.log(f"\n>>> Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Business...", 'info')
+
+                threads_business = []
+                for device in self.devices:
+                    if self.should_stop:
+                        break
+                    thread = threading.Thread(
+                        target=unirse_a_grupo_device,
+                        args=(device, grupo_link, 'com.whatsapp.w4b', 'WhatsApp Business'),
+                        daemon=True
+                    )
+                    threads_business.append(thread)
+                    thread.start()
+
+                # Esperar a que TODOS los threads de Business terminen
+                for thread in threads_business:
+                    thread.join()
+
+                if fase_num == 1:
+                    self.log(f"\n>>> FASE 1 completada: Todos unidos por WhatsApp Business", 'success')
+                else:
+                    self.log(f"\n>>> Completado: Todos unidos por WhatsApp Business", 'success')
+
                 if self.should_stop:
                     break
+
+            # ===== FASE 2: WHATSAPP NORMAL (si corresponde) =====
+            if wa_mode == "Normal" or wa_mode == "Ambas" or wa_mode == "Todas":
+                fase_num = 2 if (wa_mode == "Ambas" or wa_mode == "Todas") else 0
+                if fase_num == 2:
+                    self.log(f"\n>>> FASE 2: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal...", 'info')
+                else:
+                    self.log(f"\n>>> Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal...", 'info')
                 
-                grupo_display = grupo_link[:50] + "..." if len(grupo_link) > 50 else grupo_link
-                self.log(f"\n--- GRUPO {idx_grupo + 1}/{num_grupos}: {grupo_display} ---", 'info')
+                threads_normal = []
+                for device in self.devices:
+                    if self.should_stop:
+                        break
+                    thread = threading.Thread(
+                        target=unirse_a_grupo_device,
+                        args=(device, grupo_link, 'com.whatsapp', 'WhatsApp Normal'),
+                        daemon=True
+                    )
+                    threads_normal.append(thread)
+                    thread.start()
                 
-                # ===== FASE 1: WHATSAPP BUSINESS (si corresponde) =====
-                if wa_mode == "Business" or wa_mode == "Ambas" or wa_mode == "Todas":
-                    fase_num = 1 if (wa_mode == "Ambas" or wa_mode == "Todas") else 0
-                    if fase_num == 1:
-                        self.log(f"\n>>> FASE 1: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Business...", 'info')
-                    else:
-                        self.log(f"\n>>> Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Business...", 'info')
+                # Esperar a que TODOS los threads de Normal terminen
+                for thread in threads_normal:
+                    thread.join()
+
+                if fase_num == 2:
+                    self.log(f"\n>>> FASE 2 completada: Todos unidos por WhatsApp Normal", 'success')
+                else:
+                    self.log(f"\n>>> Completado: Todos unidos por WhatsApp Normal", 'success')
+
+                # Si el modo es "Todas", cambiar de cuenta DESPUÉS de unirse con Normal
+                if wa_mode == "Todas":
+                    self.log(f"\n>>> Cambiando de cuenta en todos los dispositivos...", 'info')
                     
-                    threads_business = []
                     for device in self.devices:
                         if self.should_stop:
                             break
-                        thread = threading.Thread(
-                            target=unirse_a_grupo_device,
-                            args=(device, grupo_link, 'com.whatsapp.w4b', 'WhatsApp Business'),
-                            daemon=True
-                        )
-                        threads_business.append(thread)
-                        thread.start()
 
-                    # Esperar a que TODOS los threads de Business terminen
-                    for thread in threads_business:
-                        thread.join()
+                        self.log(f"[{device}] Cerrando WhatsApp Normal...", 'info')
+                        close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
+                        self._run_adb_command(close_cmd, timeout=5)
+                        if not self._pausable_sleep(1): break
 
-                    if fase_num == 1:
-                        self.log(f"\n>>> FASE 1 completada: Todos unidos por WhatsApp Business", 'success')
-                    else:
-                        self.log(f"\n>>> Completado: Todos unidos por WhatsApp Business", 'success')
+                        self.log(f"[{device}] Reabriendo WhatsApp Normal...", 'info')
+                        open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
+                        self._run_adb_command(open_cmd, timeout=5)
+                        if not self._pausable_sleep(3): break # Esperar 3 segundos para que WhatsApp se abra completamente
+
+                        self.log(f"[{device}] Cambiando de cuenta...", 'info')
+                        self._switch_account_for_device(device)
+                        if not self._pausable_sleep(1): break
+
+                        self.log(f"[{device}] Cerrando WhatsApp Normal después de cambiar cuenta...", 'info')
+                        close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
+                        self._run_adb_command(close_cmd, timeout=5)
+                        if not self._pausable_sleep(1): break
+
+                        self.log(f"[{device}] Reabriendo WhatsApp Normal con nueva cuenta...", 'info')
+                        open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
+                        self._run_adb_command(open_cmd, timeout=5)
+                        if not self._pausable_sleep(2): break
                     
                     if self.should_stop:
                         break
+
+            # ===== FASE 3: WHATSAPP NORMAL 2 (si corresponde) =====
+            if wa_mode == "Todas":
+                self.log(f"\n>>> FASE 3: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal (cuenta 2)...", 'info')
                 
-                # ===== FASE 2: WHATSAPP NORMAL (si corresponde) =====
-                if wa_mode == "Normal" or wa_mode == "Ambas" or wa_mode == "Todas":
-                    fase_num = 2 if (wa_mode == "Ambas" or wa_mode == "Todas") else 0
-                    if fase_num == 2:
-                        self.log(f"\n>>> FASE 2: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal...", 'info')
-                    else:
-                        self.log(f"\n>>> Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal...", 'info')
-
-                    threads_normal = []
-                    for device in self.devices:
-                        if self.should_stop:
-                            break
-                        thread = threading.Thread(
-                            target=unirse_a_grupo_device,
-                            args=(device, grupo_link, 'com.whatsapp', 'WhatsApp Normal'),
-                            daemon=True
-                        )
-                        threads_normal.append(thread)
-                        thread.start()
-
-                    # Esperar a que TODOS los threads de Normal terminen
-                    for thread in threads_normal:
-                        thread.join()
-
-                    if fase_num == 2:
-                        self.log(f"\n>>> FASE 2 completada: Todos unidos por WhatsApp Normal", 'success')
-                    else:
-                        self.log(f"\n>>> Completado: Todos unidos por WhatsApp Normal", 'success')
-
-                    # Si el modo es "Todas", cambiar de cuenta DESPUÉS de unirse con Normal
-                    if wa_mode == "Todas":
-                        self.log(f"\n>>> Cambiando de cuenta en todos los dispositivos...", 'info')
-
-                        for device in self.devices:
-                            if self.should_stop:
-                                break
-
-                            self.log(f"[{device}] Cerrando WhatsApp Normal...", 'info')
-                            close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
-                            self._run_adb_command(close_cmd, timeout=5)
-                            time.sleep(1)
-
-                            self.log(f"[{device}] Reabriendo WhatsApp Normal...", 'info')
-                            open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
-                            self._run_adb_command(open_cmd, timeout=5)
-                            time.sleep(3)  # Esperar 3 segundos para que WhatsApp se abra completamente
-
-                            self.log(f"[{device}] Cambiando de cuenta...", 'info')
-                            self._switch_account_for_device(device)
-                            time.sleep(1)
-
-                            self.log(f"[{device}] Cerrando WhatsApp Normal después de cambiar cuenta...", 'info')
-                            close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
-                            self._run_adb_command(close_cmd, timeout=5)
-                            time.sleep(1)
-
-                            self.log(f"[{device}] Reabriendo WhatsApp Normal con nueva cuenta...", 'info')
-                            open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
-                            self._run_adb_command(open_cmd, timeout=5)
-                            time.sleep(2)
-
-                        if self.should_stop:
-                            break
+                threads_normal2 = []
+                for device in self.devices:
+                    if self.should_stop:
+                        break
+                    thread = threading.Thread(
+                        target=unirse_a_grupo_device,
+                        args=(device, grupo_link, 'com.whatsapp', 'WhatsApp Normal (cuenta 2)'),
+                        daemon=True
+                    )
+                    threads_normal2.append(thread)
+                    thread.start()
                 
-                # ===== FASE 3: WHATSAPP NORMAL 2 (si corresponde) =====
-                if wa_mode == "Todas":
-                    self.log(f"\n>>> FASE 3: Todos los dispositivos uniéndose SIMULTÁNEAMENTE por WhatsApp Normal (cuenta 2)...", 'info')
-
-                    threads_normal2 = []
-                    for device in self.devices:
-                        if self.should_stop:
-                            break
-                        thread = threading.Thread(
-                            target=unirse_a_grupo_device,
-                            args=(device, grupo_link, 'com.whatsapp', 'WhatsApp Normal (cuenta 2)'),
-                            daemon=True
-                        )
-                        threads_normal2.append(thread)
-                        thread.start()
-
-                    # Esperar a que TODOS los threads de Normal 2 terminen
-                    for thread in threads_normal2:
-                        thread.join()
-
-                    self.log(f"\n>>> FASE 3 completada: Todos unidos por WhatsApp Normal (cuenta 2)", 'success')
+                # Esperar a que TODOS los threads de Normal 2 terminen
+                for thread in threads_normal2:
+                    thread.join()
                 
-                self.log(f"\n=== GRUPO {idx_grupo + 1} completado ===", 'success')
+                self.log(f"\n>>> FASE 3 completada: Todos unidos por WhatsApp Normal (cuenta 2)", 'success')
             
-            self.log(f"\n=== PROCESO DE UNIÓN A GRUPOS FINALIZADO ===", 'success')
-            messagebox.showinfo("Éxito", f"Proceso completado.\n\nSe unieron a {num_grupos} grupo(s) con {num_devices} dispositivo(s).", parent=self.root)
-        finally:
-            self._finalize_sending()
+            self.log(f"\n=== GRUPO {idx_grupo + 1} completado ===", 'success')
+
+        self.log(f"\n=== PROCESO DE UNIÓN A GRUPOS FINALIZADO ===", 'success')
+        messagebox.showinfo("Éxito", f"Proceso completado.\n\nSe unieron a {num_grupos} grupo(s) con {num_devices} dispositivo(s).", parent=self.root)
     
     def _write_message_with_keyevents(self, device, message):
         """
@@ -3229,13 +3068,7 @@ class Hermes:
         Retorna True si tuvo éxito, False si falló.
         """
         try:
-            if self.should_stop:
-                return False
-            
-            while self.is_paused and not self.should_stop:
-                time.sleep(0.1)
-            if self.should_stop:
-                return False
+            if not self._pausable_sleep(0.1): return False
             
             # Obtener delay según velocidad seleccionada
             speed = self.write_speed.get()
@@ -3273,10 +3106,10 @@ class Hermes:
                     self.log(f"Advertencia: fallo al escribir '{char}'", "warning")
                 
                 # Delay entre caracteres según velocidad
-                time.sleep(char_delay)
+                if not self._pausable_sleep(char_delay): return False
             
             # Pausa final después de escribir todo
-            time.sleep(0.2)
+            if not self._pausable_sleep(0.2): return False
             return True
             
         except Exception as e:
@@ -3376,23 +3209,17 @@ class Hermes:
         self.btn_pause.configure(state=tk.DISABLED, text="⏸  PAUSAR")
         self.btn_stop.configure(state=tk.DISABLED)
 
-    def _enter_task_mode(self):
-        """Configura la UI para un estado de 'tarea en ejecución'."""
-        self.is_running = True
-        self.is_paused = False
-        self.should_stop = False
-        self.sent_count = 0
-        self.failed_count = 0
-        self.current_index = 0
-        self.start_time = datetime.now()
-
-        # Actualizar UI
-        self.btn_start.configure(state=tk.DISABLED)
-        self.btn_load.configure(state=tk.DISABLED)
-        if self.fidelizado_unlock_btn:
-            self.fidelizado_unlock_btn.configure(state=tk.DISABLED)
-        self.btn_pause.configure(state=tk.NORMAL)
-        self.btn_stop.configure(state=tk.NORMAL)
+    def _pausable_sleep(self, duration):
+        """Realiza una pausa no bloqueante que puede ser interrumpida."""
+        elapsed = 0
+        while elapsed < duration and not self.should_stop:
+            while self.is_paused and not self.should_stop:
+                time.sleep(0.1)
+            if self.should_stop:
+                break
+            time.sleep(0.1)
+            elapsed += 0.1
+        return not self.should_stop
 
     # --- ################################################################## ---
     # --- send_msg (MODIFICADO para loguear device)
@@ -3418,27 +3245,27 @@ class Hermes:
         
         # 2) Abrir WhatsApp y cambiar de cuenta
         self._run_adb_command(['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main'], timeout=10)
-        time.sleep(3)  # Esperar a que abra
+        if not self._pausable_sleep(3): return False # Esperar a que abra
         
         # Navegar al menú de cambio de cuenta
         for _ in range(2):
             self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_UP'], timeout=3)
-            time.sleep(0.2)
+            if not self._pausable_sleep(0.2): return False
         
         self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_RIGHT'], timeout=3)
-        time.sleep(0.2)
+        if not self._pausable_sleep(0.2): return False
         self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER'], timeout=3)
-        time.sleep(0.2)
+        if not self._pausable_sleep(0.2): return False
         
         for _ in range(7):
             self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_TAB'], timeout=3)
-            time.sleep(0.05)  # Más rápido: 0.05s entre TABs
+            if not self._pausable_sleep(0.05): return False # Más rápido: 0.05s entre TABs
         
         self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER'], timeout=3)
         
         # Esperar 3 segundos con WhatsApp abierto para que carguen los mensajes
         self.log(f"[{device}] Esperando 3s para que carguen los mensajes...", 'info')
-        time.sleep(3)
+        if not self._pausable_sleep(3): return False
         
         # 3) Cerrar todo nuevamente
         for cmd in close_commands:
@@ -3510,16 +3337,11 @@ class Hermes:
                  self.log(f"Fallo al abrir link para {num_display}. Saltando...", "warning")
                  return False
 
-            time.sleep(1) # Pequeña pausa
+            if not self._pausable_sleep(1): return False
             
             # Pausa configurable (revisando 'stop' y 'pause')
             delay = self.wait_after_open.get()
-            elapsed = 0
-            while elapsed < delay and not self.should_stop:
-                while self.is_paused and not self.should_stop: time.sleep(0.1)
-                if self.should_stop: break
-                time.sleep(0.1); elapsed += 0.1
-            if self.should_stop: return False
+            if not self._pausable_sleep(delay): return False
             
 
             # --- Lógica condicional de envío ---
@@ -3534,12 +3356,7 @@ class Hermes:
 
                 # Esperar después de escribir, antes de enviar
                 delay_enter = max(1, self.wait_after_first_enter.get() // 2)
-                elapsed_enter = 0
-                while elapsed_enter < delay_enter and not self.should_stop:
-                    while self.is_paused and not self.should_stop: time.sleep(0.1)
-                    if self.should_stop: break
-                    time.sleep(0.1); elapsed_enter += 0.1
-                if self.should_stop: return False
+                if not self._pausable_sleep(delay_enter): return False
 
                 # Presionar ENTER para enviar el texto escrito
                 enter_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER']
@@ -3555,7 +3372,7 @@ class Hermes:
                     self.log("Fallo al presionar Enter (modo normal).", "error")
                     return False
 
-            time.sleep(1) # Pausa post-envío
+            if not self._pausable_sleep(1): return False
             self.log("Mensaje enviado", 'success')
             return True
 
