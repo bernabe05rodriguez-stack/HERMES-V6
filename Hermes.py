@@ -220,6 +220,24 @@ class Hermes:
         self.should_stop = False
         self.pause_lock = threading.Lock()
 
+    def _pausable_sleep(self, duration):
+        """Pausa la ejecución por 'duration' segundos, de forma pausable."""
+        slept = 0
+        while slept < duration:
+            if self.should_stop:
+                break
+
+            # Bucle de pausa: se detiene aquí si is_paused es True
+            while self.is_paused and not self.should_stop:
+                time.sleep(0.1)
+
+            # Si se canceló mientras estaba en pausa, salir
+            if self.should_stop:
+                break
+
+            time.sleep(0.1)
+            slept += 0.1
+
         self.total_messages = 0
         self.sent_count = 0
         self.failed_count = 0
@@ -2256,10 +2274,8 @@ class Hermes:
                 self.close_all_apps(dev)
 
             if self.should_stop: self.log("Cancelado", 'warning'); return
-            self.log("Pausa inicial de 3s...", 'info')
-            if not self._pausable_sleep(3):
-                self.log("Cancelado", 'warning')
-                return
+            self.log("Pausa inicial de 3s...", 'info'); self._pausable_sleep(3)
+            if self.should_stop: self.log("Cancelado", 'warning'); return
 
             # --- Lógica de envío (depende del modo) ---
             if self.fidelizado_mode == "GRUPOS":
@@ -2293,8 +2309,10 @@ class Hermes:
         Ejecuta una única tarea de envío (abrir link, enviar, esperar).
         Esta función es el cuerpo del bucle de los hilos de envío.
         """
-        # Pausa y chequeo de cancelación
-        if not self._pausable_sleep(0.1): return False
+        # Bucle de pausa
+        while self.is_paused and not self.should_stop:
+            time.sleep(0.1)
+        if self.should_stop: return False # Indicar que la tarea no se completó
 
         # Actualizar UI (índice actual)
         # Solo actualizamos el índice que se está procesando
@@ -2323,7 +2341,7 @@ class Hermes:
         if task_index < self.total_messages and not self.should_stop:
             delay = random.uniform(self.delay_min.get(), self.delay_max.get())
             self.log(f"Esperando {delay:.1f}s... (Post-tarea {task_index})", 'info')
-            if not self._pausable_sleep(delay): return False
+            self._pausable_sleep(delay)
         
         return success
 
@@ -2419,7 +2437,7 @@ class Hermes:
 
             # Cambiar de cuenta en Normal
             self._switch_whatsapp_account(device)
-            if not self._pausable_sleep(1): break
+            self._pausable_sleep(1)
 
             if self.should_stop: break
 
@@ -2432,7 +2450,7 @@ class Hermes:
 
             # Volver a cuenta 1
             self._switch_whatsapp_account(device)
-            if not self._pausable_sleep(1): break
+            self._pausable_sleep(1)
     
     
     def _get_whatsapp_apps_to_use(self):
@@ -2460,8 +2478,10 @@ class Hermes:
         """
         self.log(f"\n[{device}] Envío {task_counter}/{self.total_messages}: {wa_name}", 'info')
         
-        # Verificar pausa y cancelación
-        if not self._pausable_sleep(0.1): return False
+        # Verificar pausa
+        while self.is_paused and not self.should_stop:
+            time.sleep(0.1)
+        if self.should_stop: return False
         
         # Abrir WhatsApp
         self.log(f"Abriendo WhatsApp {wa_name} en {device}", 'info')
@@ -2476,7 +2496,7 @@ class Hermes:
         
         # Esperar 3 segundos después de abrir
         self.log("Esperando 3s después de abrir...", 'info')
-        if not self._pausable_sleep(3): return False
+        time.sleep(3)
         
         # Escribir mensaje
         self.log(f"Escribiendo mensaje ({wa_name})...", 'info')
@@ -2490,7 +2510,12 @@ class Hermes:
         wait_write = self.wait_after_write.get()
         if wait_write > 0:
             self.log(f"Esperando {wait_write}s después de escribir...", 'info')
-            if not self._pausable_sleep(wait_write): return False
+            elapsed = 0
+            while elapsed < wait_write and not self.should_stop:
+                while self.is_paused and not self.should_stop: time.sleep(0.1)
+                if self.should_stop: return False
+                time.sleep(0.1)
+                elapsed += 0.1
         
         # Presionar Enter
         enter_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER']
@@ -2503,7 +2528,12 @@ class Hermes:
         # Esperar entre Enters
         wait_enters = self.wait_between_enters.get()
         self.log(f"Esperando {wait_enters}s entre Enters...", 'info')
-        if not self._pausable_sleep(wait_enters): return False
+        elapsed = 0
+        while elapsed < wait_enters and not self.should_stop:
+            while self.is_paused and not self.should_stop: time.sleep(0.1)
+            if self.should_stop: return False
+            time.sleep(0.1)
+            elapsed += 0.1
         
         # Presionar Enter otra vez
         if not self._run_adb_command(enter_args, timeout=10):
@@ -2521,26 +2551,26 @@ class Hermes:
             self.log(f"[{device}] Cerrando WhatsApp Normal después de enviar...", 'info')
             close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
             self._run_adb_command(close_cmd, timeout=5)
-            if not self._pausable_sleep(1): return False
+            time.sleep(1)
             
             self.log(f"[{device}] Reabriendo WhatsApp Normal...", 'info')
             open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
             self._run_adb_command(open_cmd, timeout=5)
-            if not self._pausable_sleep(3): return False # Esperar 3 segundos para que WhatsApp se abra completamente
+            time.sleep(3)  # Esperar 3 segundos para que WhatsApp se abra completamente
             
             self.log(f"[{device}] Cambiando de cuenta...", 'info')
             self._switch_account_for_device(device)
-            if not self._pausable_sleep(1): return False
+            time.sleep(1)
             
             self.log(f"[{device}] Cerrando WhatsApp Normal después de cambiar cuenta...", 'info')
             close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
             self._run_adb_command(close_cmd, timeout=5)
-            if not self._pausable_sleep(1): return False
+            time.sleep(1)
             
             self.log(f"[{device}] Reabriendo WhatsApp Normal con nueva cuenta...", 'info')
             open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
             self._run_adb_command(open_cmd, timeout=5)
-            if not self._pausable_sleep(2): return False
+            time.sleep(2)
         
         return True
     
@@ -2668,9 +2698,14 @@ class Hermes:
                             wait_between = self.wait_between_messages.get()
                             if wait_between > 0:
                                 self.log(f"Esperando {wait_between}s antes del siguiente WhatsApp...", 'info')
-                                if not self._pausable_sleep(wait_between): break
+                                elapsed = 0
+                                while elapsed < wait_between and not self.should_stop:
+                                    while self.is_paused and not self.should_stop: time.sleep(0.1)
+                                    if self.should_stop: break
+                                    time.sleep(0.1)
+                                    elapsed += 0.1
                         
-                        if not self._pausable_sleep(0.5): break
+                        time.sleep(0.5)  # Pequeña pausa entre envíos
                 
                 if self.should_stop: break
                 self.log(f"\n=== {tipo_str} {target_idx + 1} completado ===", 'success')
@@ -2742,9 +2777,14 @@ class Hermes:
                             wait_between = self.wait_between_messages.get()
                             if wait_between > 0:
                                 self.log(f"Esperando {wait_between}s antes del siguiente WhatsApp...", 'info')
-                                if not self._pausable_sleep(wait_between): break
+                                elapsed = 0
+                                while elapsed < wait_between and not self.should_stop:
+                                    while self.is_paused and not self.should_stop: time.sleep(0.1)
+                                    if self.should_stop: break
+                                    time.sleep(0.1)
+                                    elapsed += 0.1
                         
-                        if not self._pausable_sleep(0.5): break
+                        time.sleep(0.5)  # Pequeña pausa entre envíos
                 
                 if self.should_stop: break
                 self.log(f"\n=== NÚMERO {num_idx + 1} completado ===", 'success')
@@ -2871,8 +2911,11 @@ class Hermes:
                 if self.should_stop:
                     return False
 
-                # Verificar pausa y cancelación
-                if not self._pausable_sleep(0.1): return False
+                # Verificar pausa
+                while self.is_paused and not self.should_stop:
+                    time.sleep(0.1)
+                if self.should_stop:
+                    return False
 
                 self.log(f"[{device}] Uniéndose por {whatsapp_name}...", 'info')
 
@@ -2885,7 +2928,7 @@ class Hermes:
                     return False
 
                 # Esperar 2 segundos
-                if not self._pausable_sleep(2): return False
+                time.sleep(2)
 
                 if self.should_stop:
                     return False
@@ -2896,7 +2939,7 @@ class Hermes:
                         return False
                     down_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_DOWN']
                     self._run_adb_command(down_args, timeout=5)
-                    if not self._pausable_sleep(2): return False
+                    time.sleep(2)
 
                 if self.should_stop:
                     return False
@@ -2906,13 +2949,13 @@ class Hermes:
                 self._run_adb_command(enter_args, timeout=10)
 
                 # Esperar 1 segundo entre Enters
-                if not self._pausable_sleep(1): return False
+                time.sleep(1)
 
                 # Presionar ENTER (segundo Enter)
                 self._run_adb_command(enter_args, timeout=10)
 
                 # Esperar 2 segundos
-                if not self._pausable_sleep(2): return False
+                time.sleep(2)
 
                 # Presionar BACK para salir del grupo
                 back_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_BACK']
@@ -2920,7 +2963,7 @@ class Hermes:
                 self.log(f"[{device}] Presionando BACK para salir...", 'info')
 
                 # Esperar 1 segundo final
-                if not self._pausable_sleep(1): return False
+                time.sleep(1)
 
                 self.log(f"[{device}] Unido a grupo por {whatsapp_name}", 'success')
                 return True
@@ -3009,26 +3052,26 @@ class Hermes:
                         self.log(f"[{device}] Cerrando WhatsApp Normal...", 'info')
                         close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
                         self._run_adb_command(close_cmd, timeout=5)
-                        if not self._pausable_sleep(1): break
+                        time.sleep(1)
 
                         self.log(f"[{device}] Reabriendo WhatsApp Normal...", 'info')
                         open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
                         self._run_adb_command(open_cmd, timeout=5)
-                        if not self._pausable_sleep(3): break # Esperar 3 segundos para que WhatsApp se abra completamente
+                        time.sleep(3)  # Esperar 3 segundos para que WhatsApp se abra completamente
 
                         self.log(f"[{device}] Cambiando de cuenta...", 'info')
                         self._switch_account_for_device(device)
-                        if not self._pausable_sleep(1): break
+                        time.sleep(1)
 
                         self.log(f"[{device}] Cerrando WhatsApp Normal después de cambiar cuenta...", 'info')
                         close_cmd = ['-s', device, 'shell', 'am', 'force-stop', 'com.whatsapp']
                         self._run_adb_command(close_cmd, timeout=5)
-                        if not self._pausable_sleep(1): break
+                        time.sleep(1)
 
                         self.log(f"[{device}] Reabriendo WhatsApp Normal con nueva cuenta...", 'info')
                         open_cmd = ['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main']
                         self._run_adb_command(open_cmd, timeout=5)
-                        if not self._pausable_sleep(2): break
+                        time.sleep(2)
                     
                     if self.should_stop:
                         break
@@ -3067,7 +3110,13 @@ class Hermes:
         Retorna True si tuvo éxito, False si falló.
         """
         try:
-            if not self._pausable_sleep(0.1): return False
+            if self.should_stop:
+                return False
+
+            while self.is_paused and not self.should_stop:
+                time.sleep(0.1)
+            if self.should_stop:
+                return False
             
             # Obtener delay según velocidad seleccionada
             speed = self.write_speed.get()
@@ -3105,10 +3154,10 @@ class Hermes:
                     self.log(f"Advertencia: fallo al escribir '{char}'", "warning")
                 
                 # Delay entre caracteres según velocidad
-                if not self._pausable_sleep(char_delay): return False
+                time.sleep(char_delay)
             
             # Pausa final después de escribir todo
-            if not self._pausable_sleep(0.2): return False
+            time.sleep(0.2)
             return True
             
         except Exception as e:
@@ -3208,18 +3257,6 @@ class Hermes:
         self.btn_pause.configure(state=tk.DISABLED, text="⏸  PAUSAR")
         self.btn_stop.configure(state=tk.DISABLED)
 
-    def _pausable_sleep(self, duration):
-        """Realiza una pausa no bloqueante que puede ser interrumpida."""
-        elapsed = 0
-        while elapsed < duration and not self.should_stop:
-            while self.is_paused and not self.should_stop:
-                time.sleep(0.1)
-            if self.should_stop:
-                break
-            time.sleep(0.1)
-            elapsed += 0.1
-        return not self.should_stop
-
     # --- ################################################################## ---
     # --- send_msg (MODIFICADO para loguear device)
     # --- ################################################################## ---
@@ -3244,27 +3281,27 @@ class Hermes:
         
         # 2) Abrir WhatsApp y cambiar de cuenta
         self._run_adb_command(['-s', device, 'shell', 'am', 'start', '-n', 'com.whatsapp/.Main'], timeout=10)
-        if not self._pausable_sleep(3): return False # Esperar a que abra
+        time.sleep(3)  # Esperar a que abra
         
         # Navegar al menú de cambio de cuenta
         for _ in range(2):
             self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_UP'], timeout=3)
-            if not self._pausable_sleep(0.2): return False
+            time.sleep(0.2)
         
         self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_DPAD_RIGHT'], timeout=3)
-        if not self._pausable_sleep(0.2): return False
+        time.sleep(0.2)
         self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER'], timeout=3)
-        if not self._pausable_sleep(0.2): return False
+        time.sleep(0.2)
         
         for _ in range(7):
             self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_TAB'], timeout=3)
-            if not self._pausable_sleep(0.05): return False # Más rápido: 0.05s entre TABs
+            time.sleep(0.05)  # Más rápido: 0.05s entre TABs
         
         self._run_adb_command(['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER'], timeout=3)
         
         # Esperar 3 segundos con WhatsApp abierto para que carguen los mensajes
         self.log(f"[{device}] Esperando 3s para que carguen los mensajes...", 'info')
-        if not self._pausable_sleep(3): return False
+        time.sleep(3)
         
         # 3) Cerrar todo nuevamente
         for cmd in close_commands:
@@ -3336,11 +3373,16 @@ class Hermes:
                  self.log(f"Fallo al abrir link para {num_display}. Saltando...", "warning")
                  return False
 
-            if not self._pausable_sleep(1): return False
+            time.sleep(1) # Pequeña pausa
             
             # Pausa configurable (revisando 'stop' y 'pause')
             delay = self.wait_after_open.get()
-            if not self._pausable_sleep(delay): return False
+            elapsed = 0
+            while elapsed < delay and not self.should_stop:
+                while self.is_paused and not self.should_stop: time.sleep(0.1)
+                if self.should_stop: break
+                time.sleep(0.1); elapsed += 0.1
+            if self.should_stop: return False
             
 
             # --- Lógica condicional de envío ---
@@ -3355,7 +3397,12 @@ class Hermes:
 
                 # Esperar después de escribir, antes de enviar
                 delay_enter = max(1, self.wait_after_first_enter.get() // 2)
-                if not self._pausable_sleep(delay_enter): return False
+                elapsed_enter = 0
+                while elapsed_enter < delay_enter and not self.should_stop:
+                    while self.is_paused and not self.should_stop: time.sleep(0.1)
+                    if self.should_stop: break
+                    time.sleep(0.1); elapsed_enter += 0.1
+                if self.should_stop: return False
 
                 # Presionar ENTER para enviar el texto escrito
                 enter_args = ['-s', device, 'shell', 'input', 'keyevent', 'KEYCODE_ENTER']
@@ -3371,7 +3418,7 @@ class Hermes:
                     self.log("Fallo al presionar Enter (modo normal).", "error")
                     return False
 
-            if not self._pausable_sleep(1): return False
+            time.sleep(1) # Pausa post-envío
             self.log("Mensaje enviado", 'success')
             return True
 
