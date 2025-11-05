@@ -189,20 +189,9 @@ class Hermes:
     def __init__(self, root):
         self.root = root
         self.root.title("HΞЯMΞS V1")
-        # --- MODIFICACIÓN: Tamaño de ventana inteligente ---
-        # Calcular el 90% de la resolución de la pantalla para el tamaño inicial
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        init_width = int(screen_width * 0.9)
-        init_height = int(screen_height * 0.9)
-
-        # Permitir que la ventana sea redimensionable por el usuario
         self.root.resizable(True, True)
-        self.root.minsize(1024, 768)  # Establecer un tamaño mínimo razonable
-
-        # Establecer el tamaño inicial y centrar la ventana
-        self.center_window(init_width, init_height)
-        # --- FIN MODIFICACIÓN ---
+        self.root.minsize(1500, 900)
+        self.center_window(1500, 900)
 
         # Variables de estado
         self.adb_path = tk.StringVar(value="")
@@ -219,24 +208,6 @@ class Hermes:
         self.is_paused = False
         self.should_stop = False
         self.pause_lock = threading.Lock()
-
-    def _pausable_sleep(self, duration):
-        """Pausa la ejecución por 'duration' segundos, de forma pausable."""
-        slept = 0
-        while slept < duration:
-            if self.should_stop:
-                break
-
-            # Bucle de pausa: se detiene aquí si is_paused es True
-            while self.is_paused and not self.should_stop:
-                time.sleep(0.1)
-
-            # Si se canceló mientras estaba en pausa, salir
-            if self.should_stop:
-                break
-
-            time.sleep(0.1)
-            slept += 0.1
 
         self.total_messages = 0
         self.sent_count = 0
@@ -2274,7 +2245,7 @@ class Hermes:
                 self.close_all_apps(dev)
 
             if self.should_stop: self.log("Cancelado", 'warning'); return
-            self.log("Pausa inicial de 3s...", 'info'); self._pausable_sleep(3)
+            self.log("Pausa inicial de 3s...", 'info'); time.sleep(3)
             if self.should_stop: self.log("Cancelado", 'warning'); return
 
             # --- Lógica de envío (depende del modo) ---
@@ -2341,7 +2312,11 @@ class Hermes:
         if task_index < self.total_messages and not self.should_stop:
             delay = random.uniform(self.delay_min.get(), self.delay_max.get())
             self.log(f"Esperando {delay:.1f}s... (Post-tarea {task_index})", 'info')
-            self._pausable_sleep(delay)
+            elapsed = 0
+            while elapsed < delay and not self.should_stop:
+                while self.is_paused and not self.should_stop: time.sleep(0.1)
+                if self.should_stop: break
+                time.sleep(0.1); elapsed += 0.1
         
         return success
 
@@ -2437,7 +2412,7 @@ class Hermes:
 
             # Cambiar de cuenta en Normal
             self._switch_whatsapp_account(device)
-            self._pausable_sleep(1)
+            time.sleep(1)
 
             if self.should_stop: break
 
@@ -2450,7 +2425,7 @@ class Hermes:
 
             # Volver a cuenta 1
             self._switch_whatsapp_account(device)
-            self._pausable_sleep(1)
+            time.sleep(1)
     
     
     def _get_whatsapp_apps_to_use(self):
