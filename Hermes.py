@@ -2871,9 +2871,8 @@ class Hermes:
                 if self.should_stop:
                     return False
 
-        # Verificar pausa y cancelación
-        if not self._pausable_sleep(0.1): return False
-                    return False
+                # Verificar pausa y cancelación
+                if not self._pausable_sleep(0.1): return False
 
                 self.log(f"[{device}] Uniéndose por {whatsapp_name}...", 'info')
 
